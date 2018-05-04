@@ -13,6 +13,12 @@
 
 package config
 
+import (
+	"strings"
+
+	"github.com/spf13/viper"
+)
+
 // Provider provides the configuration settings for Hugo.
 type Provider interface {
 	GetString(key string) string
@@ -24,4 +30,15 @@ type Provider interface {
 	Get(key string) interface{}
 	Set(key string, value interface{})
 	IsSet(key string) bool
+}
+
+// FromTOMLString creates a config from the given TOML. This is useful in tests.
+func FromTOMLString(toml string) (Provider, error) {
+	v := viper.New()
+	v.SetConfigType("toml")
+	if err := v.ReadConfig(strings.NewReader(toml)); err != nil {
+		return nil, err
+	}
+	return v, nil
+
 }
