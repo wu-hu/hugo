@@ -17,6 +17,12 @@
 package embedded
 
 var EmbeddedTemplates = [][2]string{
+	{`README.md`, `
+
+## Build Templates
+
+If you add or modify any template in this folder, you also need to run **mage generate** to get the Go code in synch.
+`},
 	{`_default/robots.txt`, `User-agent: *`},
 	{`_default/rss.xml`, `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
@@ -83,11 +89,24 @@ var EmbeddedTemplates = [][2]string{
     {{with .GetParam "disqus_title" }}this.page.title = '{{ . }}';{{end}}
     {{with .GetParam "disqus_url" }}this.page.url = '{{ . | html  }}';{{end}}
     };
+    function disqusAgree(){
+        localStorage.setItem("agreed_to_disqus_thread", "YES");
+        localStorage.setItem("agreed_to_disqus_thread_date", (new Date()).toLocaleString() );
+        location.reload();
+    };
     (function() {
         if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
             document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
             return;
         }
+        {{- if not .Site.PrivacyConfig.Disqus.SkipAgree }}
+        if ((localStorage.getItem("agreed_to_disqus_thread") != "YES") ) {
+          document.getElementById('disqus_thread').innerHTML =
+            '{{ (default "Show comments for this page powered by [disqus.com](https://disqus.com). But first agree to the [Terms](https://help.disqus.com/terms-and-policies/terms-of-service)" (i18n "disqusTxtAgree") ) | markdownify }} '
+          + '<button id="agree-to-disqus" type="button" onclick="disqusAgree()">{{default "Yes, I agree" (i18n "disqusBtnAgree")}}</button>';
+          return;
+        }
+        {{- end }}
         var d = document, s = d.createElement('script'); s.async = true;
         s.src = '//' + {{ .Site.DisqusShortname }} + '.disqus.com/embed.js';
         s.setAttribute('data-timestamp', +new Date());
@@ -95,7 +114,8 @@ var EmbeddedTemplates = [][2]string{
     })();
 </script>
 <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>{{end}}`},
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>{{end}}
+`},
 	{`google_analytics.html`, `{{ with .Site.GoogleAnalytics }}
 <script>
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

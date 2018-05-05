@@ -22,10 +22,15 @@ const privacyConfigKey = "privacy"
 
 type Config struct {
 	YouTube YouTube
+	Disqus  Disqus
 }
 
 type YouTube struct {
 	NoCookie bool
+}
+
+type Disqus struct {
+	SkipAgree bool
 }
 
 func DecodeConfig(cfg config.Provider) (pc Config, err error) {

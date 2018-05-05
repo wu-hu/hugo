@@ -32,6 +32,8 @@ someOtherValue = "foo"
 [privacy]
 [privacy.youtube]
 noCookie = true
+[privacy.disqus]
+skipAgree = false
 `
 	cfg, err := config.FromTOMLString(tomlConfig)
 	assert.NoError(err)
@@ -52,6 +54,8 @@ someOtherValue = "foo"
 [Privacy]
 [Privacy.YouTube]
 NoCOOKIE = true
+[Privacy.Disqus]
+SkipAgree = false
 `
 	cfg, err := config.FromTOMLString(tomlConfig)
 	assert.NoError(err)
@@ -60,6 +64,7 @@ NoCOOKIE = true
 	assert.NoError(err)
 	assert.NotNil(pc)
 	assert.True(pc.YouTube.NoCookie)
+	assert.False(pc.Disqus.SkipAgree)
 }
 
 func TestDecodeConfigDefault(t *testing.T) {
@@ -69,4 +74,5 @@ func TestDecodeConfigDefault(t *testing.T) {
 	assert.NoError(err)
 	assert.NotNil(pc)
 	assert.False(pc.YouTube.NoCookie)
+	assert.False(pc.Disqus.SkipAgree)
 }
