@@ -1,0 +1,4 @@
+baseURL = "http://5izl.top/"
+languageCode = "en-us"
+title = "My New Hugo Site"
+theme = "dopetrope"
