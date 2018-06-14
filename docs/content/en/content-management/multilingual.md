@@ -282,7 +282,7 @@ i18n|MISSING_TRANSLATION|en|wordCount
 
 ## Customize Dates
 
-At the time of this writing, Golang does not yet have support for internationalized locales, but if you do some work, you can simulate it. For example, if you want to use French month names, you can add a data file like ``data/mois.yaml`` with this content:
+At the time of this writing, Go does not yet have support for internationalized locales, but if you do some work, you can simulate it. For example, if you want to use French month names, you can add a data file like ``data/mois.yaml`` with this content:
 
 ~~~yaml
 1: "janvier"
@@ -366,7 +366,7 @@ For merging of content from other languages (i.e. missing content translations),
 
 To support Multilingual mode in your themes, some considerations must be taken for the URLs in the templates. If there is more than one language, URLs must meet the following criteria:
 
-* Come from the built-in `.Permalink` or `.URL`
+* Come from the built-in `.Permalink` or `.RelPermalink`
 * Be constructed with
     * The [`relLangURL` template function][rellangurl] or the [`absLangURL` template function][abslangurl] **OR**
     * Prefixed with `{{ .LanguagePrefix }}`

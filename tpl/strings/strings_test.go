@@ -173,6 +173,33 @@ func TestCountRunes(t *testing.T) {
 	}
 }
 
+func TestRuneCount(t *testing.T) {
+	t.Parallel()
+
+	for i, test := range []struct {
+		s      interface{}
+		expect interface{}
+	}{
+		{"foo bar", 7},
+		{"旁边", 2},
+		{`<div class="test">旁边</div>`, 26},
+		// errors
+		{tstNoStringer{}, false},
+	} {
+		errMsg := fmt.Sprintf("[%d] %v", i, test.s)
+
+		result, err := ns.RuneCount(test.s)
+
+		if b, ok := test.expect.(bool); ok && !b {
+			require.Error(t, err, errMsg)
+			continue
+		}
+
+		require.NoError(t, err, errMsg)
+		assert.Equal(t, test.expect, result, errMsg)
+	}
+}
+
 func TestCountWords(t *testing.T) {
 	t.Parallel()
 
@@ -699,6 +726,41 @@ func TestTrimSuffix(t *testing.T) {
 		errMsg := fmt.Sprintf("[%d] %v", i, test)
 
 		result, err := ns.TrimSuffix(test.suffix, test.s)
+
+		if b, ok := test.expect.(bool); ok && !b {
+			require.Error(t, err, errMsg)
+			continue
+		}
+
+		require.NoError(t, err, errMsg)
+		assert.Equal(t, test.expect, result, errMsg)
+	}
+}
+
+func TestRepeat(t *testing.T) {
+	t.Parallel()
+
+	for i, test := range []struct {
+		s      interface{}
+		n      interface{}
+		expect interface{}
+	}{
+		{"yo", "2", "yoyo"},
+		{"~", "16", "~~~~~~~~~~~~~~~~"},
+		{"<tag>", "0", ""},
+		{"yay", "1", "yay"},
+		{1221, "1", "1221"},
+		{1221, 2, "12211221"},
+		{template.HTML("<tag>"), "2", "<tag><tag>"},
+		{[]byte("<tag>"), 2, "<tag><tag>"},
+		// errors
+		{"", tstNoStringer{}, false},
+		{tstNoStringer{}, "", false},
+		{"ab", -1, false},
+	} {
+		errMsg := fmt.Sprintf("[%d] %v", i, test)
+
+		result, err := ns.Repeat(test.n, test.s)
 
 		if b, ok := test.expect.(bool); ok && !b {
 			require.Error(t, err, errMsg)

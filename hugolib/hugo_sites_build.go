@@ -131,6 +131,7 @@ func (h *HugoSites) initRebuild(config *BuildCfg) error {
 		s.resetBuildState()
 	}
 
+	h.resetLogs()
 	helpers.InitLoggers()
 
 	return nil
@@ -168,7 +169,9 @@ func (h *HugoSites) assemble(config *BuildCfg) error {
 	if len(h.Sites) > 1 {
 		// The first is initialized during process; initialize the rest
 		for _, site := range h.Sites[1:] {
-			site.initializeSiteInfo()
+			if err := site.initializeSiteInfo(); err != nil {
+				return err
+			}
 		}
 	}
 

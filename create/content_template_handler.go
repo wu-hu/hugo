@@ -42,7 +42,7 @@ type ArchetypeFileData struct {
 	// used in the archetype template. Also, if this is a multilingual setup,
 	// this site is the site that best matches the target content file, based
 	// on the presence of language code in the filename.
-	Site *hugolib.Site
+	Site *hugolib.SiteInfo
 
 	// Name will in most cases be the same as TranslationBaseName, e.g. "my-post".
 	// But if that value is "index" (bundles), the Name is instead the owning folder.
@@ -89,10 +89,11 @@ func executeArcheTypeAsTemplate(s *hugolib.Site, kind, targetPath, archetypeFile
 	)
 
 	ps, err := helpers.NewPathSpec(s.Deps.Fs, s.Deps.Cfg)
-	sp := source.NewSourceSpec(ps, ps.Fs.Source)
 	if err != nil {
 		return nil, err
 	}
+	sp := source.NewSourceSpec(ps, ps.Fs.Source)
+
 	f := sp.NewFileInfo("", targetPath, false, nil)
 
 	name := f.TranslationBaseName()
@@ -108,16 +109,16 @@ func executeArcheTypeAsTemplate(s *hugolib.Site, kind, targetPath, archetypeFile
 		Date: time.Now().Format(time.RFC3339),
 		Name: name,
 		File: f,
-		Site: s,
+		Site: &s.Info,
 	}
 
 	if archetypeFilename == "" {
 		// TODO(bep) archetype revive the issue about wrong tpl funcs arg order
 		archetypeTemplate = []byte(ArchetypeTemplateTemplate)
 	} else {
-		archetypeTemplate, err = afero.ReadFile(s.Fs.Source, archetypeFilename)
+		archetypeTemplate, err = afero.ReadFile(s.BaseFs.Archetypes.Fs, archetypeFilename)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to read archetype file %q: %s", archetypeFilename, err)
+			return nil, fmt.Errorf("failed to read archetype file %s", err)
 		}
 
 	}

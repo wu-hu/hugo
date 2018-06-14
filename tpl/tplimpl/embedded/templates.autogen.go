@@ -76,7 +76,9 @@ var EmbeddedTemplates = [][2]string{
 	{{ end }}
 </sitemapindex>
 `},
-	{`disqus.html`, `{{ if .Site.DisqusShortname }}<div id="disqus_thread"></div>
+	{`disqus.html`, `{{- $pc := .Page.Site.Config.Privacy.Disqus -}}
+{{- if not $pc.Disable -}}
+{{ if .Site.DisqusShortname }}<div id="disqus_thread"></div>
 <script>
     var disqus_config = function () {
     {{with .GetParam "disqus_identifier" }}this.page.identifier = '{{ . }}';{{end}}
@@ -95,26 +97,75 @@ var EmbeddedTemplates = [][2]string{
     })();
 </script>
 <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>{{end}}`},
-	{`google_analytics.html`, `{{ with .Site.GoogleAnalytics }}
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>{{end}}
+{{- end -}}`},
+	{`google_analytics.html`, `{{- $pc := .Site.Config.Privacy.GoogleAnalytics -}}
+{{- if not $pc.Disable -}}
+{{ with .Site.GoogleAnalytics }}
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-ga('create', '{{ . }}', 'auto');
-ga('send', 'pageview');
+{{ template "__ga_js_set_doNotTrack" $ }}
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	{{- if $pc.UseSessionStorage }}
+	if (window.sessionStorage) {
+		var GA_SESSION_STORAGE_KEY = 'ga:clientId';
+		ga('create', '{{ . }}', {
+	    'storage': 'none',
+	    'clientId': sessionStorage.getItem(GA_SESSION_STORAGE_KEY)
+	   });
+	   ga(function(tracker) {
+	    sessionStorage.setItem(GA_SESSION_STORAGE_KEY, tracker.get('clientId'));
+	   });
+   }
+	{{ else }}
+	ga('create', '{{ . }}', 'auto');
+	{{ end -}}
+	{{ if $pc.AnonymizeIP }}ga('set', 'anonymizeIp', true);{{ end }}
+	ga('send', 'pageview');
+}
 </script>
-{{ end }}`},
-	{`google_analytics_async.html`, `{{ with .Site.GoogleAnalytics }}
+{{ end }}
+{{- end -}}
+{{- define "__ga_js_set_doNotTrack" -}}{{/* This is also used in the async version. */}}
+{{- $pc := .Site.Config.Privacy.GoogleAnalytics -}}
+{{- if not $pc.RespectDoNotTrack -}}
+var doNotTrack = false;
+{{- else -}}
+var dnt = (navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack);
+var doNotTrack = (dnt == "1" || dnt == "yes");
+{{- end -}}
+{{- end -}}`},
+	{`google_analytics_async.html`, `{{- $pc := .Site.Config.Privacy.GoogleAnalytics -}}
+{{- if not $pc.Disable -}}
+{{ with .Site.GoogleAnalytics }}
 <script>
-window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-ga('create', '{{ . }}', 'auto');
-ga('send', 'pageview');
+{{ template "__ga_js_set_doNotTrack" $ }}
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	{{- if $pc.UseSessionStorage }}
+	if (window.sessionStorage) {
+		var GA_SESSION_STORAGE_KEY = 'ga:clientId';
+		ga('create', '{{ . }}', {
+	    'storage': 'none',
+	    'clientId': sessionStorage.getItem(GA_SESSION_STORAGE_KEY)
+	   });
+	   ga(function(tracker) {
+	    sessionStorage.setItem(GA_SESSION_STORAGE_KEY, tracker.get('clientId'));
+	   });
+   }
+	{{ else }}
+	ga('create', '{{ . }}', 'auto');
+	{{ end -}}
+	{{ if $pc.AnonymizeIP }}ga('set', 'anonymizeIp', true);{{ end }}
+	ga('send', 'pageview');
+}
 </script>
-<script async src='//www.google-analytics.com/analytics.js'></script>
-{{ end }}`},
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+{{ end }}
+{{- end -}}`},
 	{`google_news.html`, `{{ if .IsPage }}{{ with .Params.news_keywords }}
   <meta name="news_keywords" content="{{ range $i, $kw := first 10 . }}{{ if $i }},{{ end }}{{ $kw }}{{ end }}" />
 {{ end }}{{ end }}`},
@@ -218,6 +269,41 @@ ga('send', 'pageview');
 <!-- Output all taxonomies as schema.org keywords -->
 <meta itemprop="keywords" content="{{ if .IsPage}}{{ range $index, $tag := .Params.tags }}{{ $tag }},{{ end }}{{ else }}{{ range $plural, $terms := .Site.Taxonomies }}{{ range $term, $val := $terms }}{{ printf "%s," $term }}{{ end }}{{ end }}{{ end }}" />
 {{ end }}`},
+	{`shortcodes/__h_simple_assets.html`, `{{ define "__h_simple_css" }}{{/* These template definitions are global. */}}
+{{- if not (.Page.Scratch.Get "__h_simple_css") -}}
+{{/* Only include once */}}
+{{-  .Page.Scratch.Set "__h_simple_css" true -}}
+<style>
+.__h_video {
+   position: relative;
+   padding-bottom: 56.23%;
+   height: 0;
+   overflow: hidden;
+   width: 100%;
+   background: #000;
+}
+.__h_video img {
+   width: 100%;
+   height: auto;
+   color: #000;
+}
+.__h_video .play {
+   height: 72px;
+   width: 72px;
+   left: 50%;
+   top: 50%;
+   margin-left: -36px;
+   margin-top: -36px;
+   position: absolute;
+   cursor: pointer;
+}
+</style>
+{{- end -}}
+{{- end -}}
+{{- define "__h_simple_icon_play" -}}
+<svg version="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 61 61"><circle cx="30.5" cy="30.5" r="30.5" opacity=".8" fill="#000"></circle><path d="M25.3 19.2c-2.1-1.2-3.8-.2-3.8 2.2v18.1c0 2.4 1.7 3.4 3.8 2.2l16.6-9.1c2.1-1.2 2.1-3.2 0-4.4l-16.6-9z" fill="#fff"></path></svg>
+{{- end -}}
+`},
 	{`shortcodes/figure.html`, `<!-- image -->
 <figure{{ with .Get "class" }} class="{{.}}"{{ end }}>
     {{ if .Get "link"}}<a href="{{ .Get "link" }}"{{ with .Get "target" }} target="{{ . }}"{{ end }}{{ with .Get "rel" }} rel="{{ . }}"{{ end }}>{{ end }}
@@ -238,27 +324,152 @@ ga('send', 'pageview');
 <!-- image -->`},
 	{`shortcodes/gist.html`, `<script src="//gist.github.com/{{ index .Params 0 }}/{{ index .Params 1 }}.js{{if len .Params | eq 3 }}?file={{ index .Params 2 }}{{end}}"></script>`},
 	{`shortcodes/highlight.html`, `{{ if len .Params | eq 2 }}{{ highlight (trim .Inner "\n\r") (.Get 0) (.Get 1) }}{{ else }}{{ highlight (trim .Inner "\n\r") (.Get 0) "" }}{{ end }}`},
-	{`shortcodes/instagram.html`, `{{ if len .Params | eq 2 }}{{ if eq (.Get 1) "hidecaption" }}{{ with getJSON "https://api.instagram.com/oembed/?url=https://instagram.com/p/" (index .Params 0) "/&hidecaption=1" }}{{ .html | safeHTML }}{{ end }}{{ end }}{{ else }}{{ with getJSON "https://api.instagram.com/oembed/?url=https://instagram.com/p/" (index .Params 0) "/&hidecaption=0" }}{{ .html | safeHTML }}{{ end }}{{ end }}`},
+	{`shortcodes/instagram.html`, `{{- $pc := .Page.Site.Config.Privacy.Instagram -}}
+{{- if not $pc.Disable -}}
+{{- if $pc.Simple -}}
+{{ template "_internal/shortcodes/instagram_simple.html" . }}
+{{- else -}}
+{{ $id := .Get 0 }}
+{{ $hideCaption := cond (eq (.Get 1) "hidecaption") "1" "0" }}
+{{ with getJSON "https://api.instagram.com/oembed/?url=https://instagram.com/p/" $id "/&hidecaption=" $hideCaption  }}{{ .html | safeHTML }}{{ end }}
+{{- end -}}
+{{- end -}}`},
+	{`shortcodes/instagram_simple.html`, `{{- $pc := .Page.Site.Config.Privacy.Instagram -}}
+{{- $sc := .Page.Site.Config.Services.Instagram -}}
+{{- if not $pc.Disable -}}
+{{- $id := .Get 0 -}}
+{{- $item := getJSON "https://api.instagram.com/oembed/?url=https://www.instagram.com/p/" $id "/&amp;maxwidth=640&amp;omitscript=true" -}}
+{{- $class1 := "__h_instagram" -}}
+{{- $class2 := "s_instagram_simple" -}}
+{{- $hideCaption := (eq (.Get 1) "hidecaption") -}}
+{{ with $item }}
+{{- $mediaURL := printf "https://instagram.com/p/%s/" $id | safeURL -}}
+{{- if not $sc.DisableInlineCSS -}}
+{{ template "__h_simple_instagram_css" $ }}
+{{- end -}}
+<div class="{{ $class1 }} {{ $class2 }} card" style="max-width: {{ $item.thumbnail_width }}px">
+	<div class="card-header">
+    <a href="{{ $item.author_url | safeURL }}" class="card-link">{{ $item.author_name }}</a>
+  </div>
+	<a href="{{ $mediaURL }}" target="_blank"><img class="card-img-top img-fluid" src="{{ $item.thumbnail_url }}" width="{{ $item.thumbnail_width }}"  height="{{ $item.thumbnail_height }}" alt="Instagram Image"></a>
+	<div class="card-body">
+		{{ if not $hideCaption }}<p class="card-text"><a href="{{ $item.author_url | safeURL }}" class="card-link">{{ $item.author_name }}</a> {{ $item.title}}</p>{{ end }}
+		<a href="{{ $item.author_url | safeURL }}" class="card-link">View More on Instagram</a>
+	</div>
+</div>
+{{ end }}
+{{- end -}}
+
+{{ define "__h_simple_instagram_css" }}
+{{ if not (.Page.Scratch.Get "__h_simple_instagram_css") }}
+{{/* Only include once */}}
+{{  .Page.Scratch.Set "__h_simple_instagram_css" true }}
+<style type="text/css">
+   .__h_instagram.card {
+      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
+      font-size: 14px;
+      border: 1px solid rgb(219, 219, 219);
+      padding: 0;
+	  margin-top: 30px;
+   }
+   .__h_instagram.card .card-header, .__h_instagram.card .card-body {
+      padding: 10px 10px 10px;
+   }
+   .__h_instagram.card img {
+      width: 100%;
+    	height: auto;
+   }
+</style>
+{{ end }}
+{{ end }}`},
 	{`shortcodes/ref.html`, `{{ if len .Params | eq 2 }}{{ ref .Page (.Get 0) (.Get 1) }}{{ else }}{{ ref .Page (.Get 0) }}{{ end }}`},
 	{`shortcodes/relref.html`, `{{ if len .Params | eq 2 }}{{ relref .Page (.Get 0) (.Get 1) }}{{ else }}{{ relref .Page (.Get 0) }}{{ end }}`},
-	{`shortcodes/speakerdeck.html`, `<script async class='speakerdeck-embed' data-id='{{ index .Params 0 }}' data-ratio='1.33333333333333' src='//speakerdeck.com/assets/embed.js'></script>`},
-	{`shortcodes/tweet.html`, `{{ (getJSON "https://api.twitter.com/1/statuses/oembed.json?id=" (index .Params 0)).html | safeHTML }}`},
-	{`shortcodes/vimeo.html`, `{{ if .IsNamedParams }}<div {{ if .Get "class" }}class="{{ .Get "class" }}"{{ else }}style="position: relative; padding-bottom: 56.25%; padding-top: 30px; height: 0; overflow: hidden;"{{ end }}>
-  <iframe src="//player.vimeo.com/video/{{ .Get "id" }}" {{ if not (.Get "class") }}style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" {{ end }}webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+	{`shortcodes/twitter.html`, `{{- $pc := .Page.Site.Config.Privacy.Twitter -}}
+{{- if not $pc.Disable -}}
+{{- if $pc.Simple -}}
+{{ template "_internal/shortcodes/twitter_simple.html" . }}
+{{- else -}}
+{{- $url := printf "https://api.twitter.com/1/statuses/oembed.json?id=%s&dnt=%t" (index .Params 0) $pc.EnableDNT -}}
+{{- $json := getJSON $url -}}
+{{ $json.html | safeHTML }}
+{{- end -}}
+{{- end -}}`},
+	{`shortcodes/twitter_simple.html`, `{{- $pc := .Page.Site.Config.Privacy.Twitter -}}
+{{- $sc := .Page.Site.Config.Services.Twitter -}}
+{{- if not $pc.Disable -}}
+{{- $id := .Get 0 -}}
+{{- $json := getJSON "https://api.twitter.com/1/statuses/oembed.json?id=" $id "&omit_script=true" -}}
+{{- if not $sc.DisableInlineCSS -}}
+{{ template "__h_simple_twitter_css" $ }}
+{{- end -}}
+{{ $json.html | safeHTML }}
+{{- end -}}
+
+{{ define "__h_simple_twitter_css" }}
+{{ if not (.Page.Scratch.Get "__h_simple_twitter_css") }}
+{{/* Only include once */}}
+{{  .Page.Scratch.Set "__h_simple_twitter_css" true }}
+<style type="text/css">
+  .twitter-tweet {
+  font: 14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
+  border-left: 4px solid #2b7bb9;
+  padding-left: 1.5em;
+  color: #555;
+}
+  .twitter-tweet a {
+  color: #2b7bb9;
+  text-decoration: none;
+}
+  blockquote.twitter-tweet a:hover,
+  blockquote.twitter-tweet a:focus {
+  text-decoration: underline;
+}
+</style>
+{{ end }}
+{{ end }}`},
+	{`shortcodes/vimeo.html`, `{{- $pc := .Page.Site.Config.Privacy.Vimeo -}}
+{{- if not $pc.Disable -}}
+{{- if $pc.Simple -}}
+{{ template "_internal/shortcodes/vimeo_simple.html" . }}
+{{- else -}}
+{{ if .IsNamedParams }}<div {{ if .Get "class" }}class="{{ .Get "class" }}"{{ else }}style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;"{{ end }}>
+  <iframe src="//player.vimeo.com/video/{{ .Get "id" }}" {{ if not (.Get "class") }}style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;" {{ end }}webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
  </div>{{ else }}
-<div {{ if len .Params | eq 2 }}class="{{ .Get 1 }}"{{ else }}style="position: relative; padding-bottom: 56.25%; padding-top: 30px; height: 0; overflow: hidden;"{{ end }}>
-  <iframe src="//player.vimeo.com/video/{{ .Get 0 }}" {{ if len .Params | eq 1 }}style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" {{ end }}webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+<div {{ if len .Params | eq 2 }}class="{{ .Get 1 }}"{{ else }}style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;"{{ end }}>
+  <iframe src="//player.vimeo.com/video/{{ .Get 0 }}" {{ if len .Params | eq 1 }}style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;" {{ end }}webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
  </div>
-{{ end }}`},
-	{`shortcodes/youtube.html`, `{{ if .IsNamedParams }}
-<div {{ if .Get "class" }}class="{{ .Get "class" }}"{{ else }}style="position: relative; padding-bottom: 56.25%; padding-top: 30px; height: 0; overflow: hidden;"{{ end }}>
-  <iframe src="//www.youtube.com/embed/{{ .Get "id" }}?{{ with .Get "autoplay" }}{{ if eq . "true" }}autoplay=1{{ end }}{{ end }}"
-  {{ if not (.Get "class") }}style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" {{ end }}allowfullscreen frameborder="0" title="YouTube Video"></iframe>
-</div>{{ else }}
-<div {{ if len .Params | eq 2 }}class="{{ .Get 1 }}"{{ else }}style="position: relative; padding-bottom: 56.25%; padding-top: 30px; height: 0; overflow: hidden;"{{ end }}>
-  <iframe src="//www.youtube.com/embed/{{ .Get 0 }}" {{ if len .Params | eq 1 }}style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" {{ end }}allowfullscreen frameborder="0" title="YouTube Video"></iframe>
- </div>
-{{ end }}`},
+{{ end }}
+{{- end -}}
+{{- end -}}`},
+	{`shortcodes/vimeo_simple.html`, `{{ $id := .Get "id" | default (.Get 0) }}
+{{- $item := getJSON "https://vimeo.com/api/oembed.json?url=https://vimeo.com/" $id -}}
+{{ $class := .Get "class" | default (.Get 1) }}
+{{ $hasClass := $class }}
+{{ $class := $class | default "__h_video" }}
+{{ if not $hasClass }}
+{{/* If class is set, assume the user wants to provide his own styles. */}}
+{{ template "__h_simple_css" $ }}
+{{ end }}
+{{ $secondClass := "s_video_simple" }}
+<div class="{{ $secondClass }} {{ $class }}">
+{{- with $item }}
+<a href="{{ .provider_url }}{{ .video_id | safeHTMLAttr }}" target="_blank">
+{{ $thumb := .thumbnail_url }}
+{{ $original := $thumb | replaceRE "(_.*\\.)" "." }}
+<img src="{{ $thumb }}" srcset="{{ $thumb }} 1x, {{ $original }} 2x" alt="{{ .title }}">
+<div class="play">{{ template "__h_simple_icon_play" $ }}</div></a></div>
+{{- end -}}
+`},
+	{`shortcodes/youtube.html`, `{{- $pc := .Page.Site.Config.Privacy.YouTube -}}
+{{- if not $pc.Disable -}}
+{{- $ytHost := cond $pc.PrivacyEnhanced  "www.youtube-nocookie.com" "www.youtube.com" -}}
+{{- $id := .Get "id" | default (.Get 0) -}}
+{{- $class := .Get "class" | default (.Get 1) }}
+<div {{ with $class }}class="{{ . }}"{{ else }}style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;"{{ end }}>
+  <iframe src="//{{ $ytHost }}/embed/{{ $id }}{{ with .Get "autoplay" }}{{ if eq . "true" }}?autoplay=1{{ end }}{{ end }}" {{ if not $class }}style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;" {{ end }}allowfullscreen title="YouTube Video"></iframe>
+</div>
+{{ end -}}
+`},
 	{`twitter_cards.html`, `{{- with $.Params.images -}}
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="{{ index . 0 | absURL }}"/>

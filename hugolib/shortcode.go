@@ -41,7 +41,8 @@ type ShortcodeWithPage struct {
 	Parent        *ShortcodeWithPage
 	IsNamedParams bool
 
-	// Zero-based oridinal in relation to its parent.
+	// Zero-based ordinal in relation to its parent. If the parent is the page itself,
+	// this ordinal will represent the position of this shortcode in the page content.
 	Ordinal int
 
 	scratch *Scratch
@@ -85,7 +86,10 @@ func (scp *ShortcodeWithPage) Get(key interface{}) interface{} {
 	switch key.(type) {
 	case int64, int32, int16, int8, int:
 		if reflect.TypeOf(scp.Params).Kind() == reflect.Map {
-			return "error: cannot access named params by position"
+			// We treat this as a non error, so people can do similar to
+			// {{ $myParam := .Get "myParam" | default .Get 0 }}
+			// Without having to do additional checks.
+			return nil
 		} else if reflect.TypeOf(scp.Params).Kind() == reflect.Slice {
 			idx := int(reflect.ValueOf(key).Int())
 			ln := reflect.ValueOf(scp.Params).Len()
@@ -101,10 +105,10 @@ func (scp *ShortcodeWithPage) Get(key interface{}) interface{} {
 				return ""
 			}
 		} else if reflect.TypeOf(scp.Params).Kind() == reflect.Slice {
-			if reflect.ValueOf(scp.Params).Len() == 1 && reflect.ValueOf(scp.Params).Index(0).String() == "" {
-				return nil
-			}
-			return "error: cannot access positional params by string name"
+			// We treat this as a non error, so people can do similar to
+			// {{ $myParam := .Get "myParam" | default .Get 0 }}
+			// Without having to do additional checks.
+			return nil
 		}
 	}
 
