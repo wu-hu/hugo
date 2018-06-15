@@ -1,4 +1,18 @@
-baseURL = "http://5izl.top/"
 languageCode = "en-us"
-title = "My New Hugo Site"
+title = "Dopetrope"
+baseURL = "https://5izl.top/"
 theme = "dopetrope"
+
+[params.portfolio]
+    title = "My Portfolio"
+    foldername = "portfolio"
+    findoutmoretext = "Find out more"
+
+[params.blog]
+    title = "The Blog"
+    viewalltext = "View All"
+    foldername = "blog"
+
+[params.settings]
+    googleanalytics = "UA-113904582-2"
+    disqus = "hugo-dopetrope"
